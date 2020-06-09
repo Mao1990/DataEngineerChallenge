@@ -2,8 +2,37 @@ package com.seansun.sessionization.batch
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+import pureconfig._
+import pureconfig.generic.auto._
+import com.seansun.sessionization.conf.ApplicationConfig.BatchSessionConfig
+import com.seansun.sessionization.core.Sessionizer
 
-object DataReader {
+object Processor {
+
+  def main(args: Array[String]): Unit = {
+
+
+    val batchSessionConfig = ConfigSource.default.at("batch").load[BatchSessionConfig]
+
+    batchSessionConfig match {
+      case Left(err) =>  println(err.prettyPrint())
+      case Right(conf) => {
+        implicit val spark: SparkSession = SparkSession.builder().appName("Spark SQL batched Sessionize").getOrCreate()
+
+        val logDf = fromFile(conf.logPath, logSchema)
+        val sessionDs = Sessionizer.sqlSessionize(logDf, col(conf.userIdField), conf.maxSessionDuration)
+
+        println("The average session time is \n")
+        sessionDs.select(avg("sessionLength").as("average session time in second")).show()
+
+
+      }
+    }
+
+
+
+  }
 
   val logSchema = StructType(
     Seq(
@@ -31,4 +60,8 @@ object DataReader {
       .schema(schema)
       .csv(path)
   }
+
+
+
+
 }
