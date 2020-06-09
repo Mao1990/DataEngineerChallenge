@@ -8,17 +8,19 @@ object Sessionizer {
 
   final case class Session(
     userId: String,
-    sessionId: String,
+    sessionId: Long,
     startTimestamp: Long,
     endTimestamp: Long,
     sessionLength: Long,
     count: Long,
-    requests: Array[String]
+    requests: Seq[String],
+    uniqueRequests: Seq[String]
   )
   def sqlSessionize(inputDf: DataFrame, userId: Column, maxSessionDuration: Int)
     (implicit spark: SparkSession): Dataset[Session] = {
     import spark.implicits._
     inputDf
+      .withColumn("userId", userId)
       .withColumn(
         "previousActionTimestamp",
         lag(col("timestamp"), 1).over(Window.partitionBy(userId).orderBy("timestamp")))
@@ -34,7 +36,7 @@ object Sessionizer {
         "sessionId",
         sum(col("isNewSession"))
           .over(Window.partitionBy(userId).orderBy(userId, col("timestamp"))))
-      .groupBy(userId.as("userId"), col("sessionId"))
+      .groupBy(col("userId"), col("sessionId"))
       .agg(
         min("timestamp").as("startTimestamp"),
         max("timestamp").as("endTimestamp"),
@@ -43,11 +45,12 @@ object Sessionizer {
         count("*").as("count"),
         collect_list(col("request")).as("requests")
       )
+      .withColumn("uniqueRequests", oneHitRequestUdf(col("requests")))
       .as[Session]
   }
 
-  val oneHitRequest: Array[String] => Array[String] =
-    _.groupBy(r => r).mapValues(_.length).filter(_._2 == 1).keys.toArray
+  val oneHitRequest: Seq[String] => Seq[String] =
+    _.groupBy(r => r).mapValues(_.length).filter(_._2 == 1).keys.toSeq
 
   val oneHitRequestUdf = udf(oneHitRequest)
 

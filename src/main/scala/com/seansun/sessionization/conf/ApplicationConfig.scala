@@ -4,7 +4,11 @@ import pureconfig._
 import pureconfig.generic.auto._
 
 object ApplicationConfig {
-
-  final case class BatchSessionConfig(userIdField: String, maxSessionDuration: Int, logPath: String, output: String)
+  final case class BatchSessionConfig(
+    userIdField: String,
+    maxSessionDuration: Int,
+    srcPath: String,
+    outputPath: String
+  )
 
 }

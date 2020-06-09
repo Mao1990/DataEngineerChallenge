@@ -12,7 +12,6 @@ object Processor {
 
   def main(args: Array[String]): Unit = {
 
-
     val batchSessionConfig = ConfigSource.default.at("batch").load[BatchSessionConfig]
 
     batchSessionConfig match {
@@ -20,21 +19,27 @@ object Processor {
       case Right(conf) => {
         implicit val spark: SparkSession = SparkSession.builder().appName("Spark SQL batched Sessionize").getOrCreate()
 
-        val logDf = fromFile(conf.logPath, logSchema)
+        val logDf = fromFile(conf.srcPath, logSchema)
+          .withColumn("ip", regexp_extract(col("client:port"), "(.+):", 1))
         val sessionDs = Sessionizer.sqlSessionize(logDf, col(conf.userIdField), conf.maxSessionDuration)
 
-        println("The average session time is \n")
         sessionDs.select(avg("sessionLength").as("average session time in second")).show()
 
-
+        sessionDs
+          .groupBy(col("userId"))
+          .agg(sum("sessionLength").as("totalSessionTime"))
+          .orderBy(col("totalSessionTime").desc)
+          .show(10)
+        sessionDs.select(
+          col("userId"),
+          col("sessionId"),
+          array_join(col("uniqueRequests"), "|")
+        ).write.csv(conf.outputPath)
       }
     }
-
-
-
   }
 
-  val logSchema = StructType(
+  val logSchema: StructType = StructType(
     Seq(
       StructField("timestamp", TimestampType, nullable = false),
       StructField("elb", StringType, nullable = false),
@@ -48,7 +53,7 @@ object Processor {
       StructField("received_bytes", LongType, nullable = false),
       StructField("sent_bytes", LongType, nullable = false),
       StructField("request", StringType, nullable = false),
-      StructField("user_agent", StringType, nullable = false),
+      StructField("user_agent", StringType, nullable = true),
       StructField("ssl_cipher", StringType, nullable = false),
       StructField("ssl_protocol", StringType, nullable = false)
     )
@@ -57,6 +62,7 @@ object Processor {
   def fromFile(path: String, schema: StructType)(implicit spark: SparkSession): DataFrame = {
     spark.read
       .option("delimiter", " ")
+      .option("timestampFormat", "yyyy-MM-dd'T'HH:mm:ss.SSSXXXZ")
       .schema(schema)
       .csv(path)
   }
