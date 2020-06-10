@@ -49,11 +49,9 @@ object Processor {
             .collect()
             .foreach(line => fileWriter.append(line + "\n\n"))
 
-          fileWriter.append("The following shows the top 10 most engaged user\n")
-          fileWriter.append(
-            "[userId, totalSessionTime, totalSessionCount, totalRequestCount, totalUniqueRequestCount]\n"
-          )
-          sessionDs
+          fileWriter.append("The following shows the top 10 most engaged user\n\n")
+
+          val top10EngagedDf = sessionDs
             .groupBy(col("userId"))
             .agg(
               sum("sessionLength").as("totalSessionTime"),
@@ -61,9 +59,13 @@ object Processor {
               sum(size(col("requests"))).as("totalRequestCount"),
               sum(size(col("uniqueRequests"))).as("totalUniqueRequestCount")
             )
-            .orderBy(col("totalSessionTime").desc).show
+            .orderBy(col("totalSessionTime").desc)
+
+          fileWriter.append(top10EngagedDf.columns.mkString("|") + "\n")
+          fileWriter.append(top10EngagedDf.columns.map(_ => "---").mkString("|") + "\n")
+          top10EngagedDf
             .take(10)
-            .foreach(line => fileWriter.append(line + "\n"))
+            .foreach(row => fileWriter.append(row.mkString("|") + "\n"))
 
           fileWriter.close()
 

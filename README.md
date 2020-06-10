@@ -75,3 +75,22 @@ This is not a pass or fail test, we want to hear about your challenges and your 
   [--maxSessionDuration 15 \]
   [--userIdField ip]
 ```
+
+### Result
+
+The average session length time in second is: [6.355726760476373]
+
+The following shows the top 10 most engaged user
+
+userId|totalSessionTime|totalSessionCount|totalRequestCount|totalUniqueRequestCount
+---|---|---|---|---
+52.74.219.71|3908|14|40633|26735
+119.81.61.166|3898|14|32829|31083
+54.251.151.39|3882|14|4003|8
+106.186.23.95|3304|21|14565|13748
+54.169.191.85|3253|12|1318|0
+220.226.206.7|1995|65|1536|892
+188.40.135.194|1883|7|644|644
+203.191.34.178|1770|18|486|210
+125.19.44.66|1699|40|1460|772
+213.239.204.204|1603|6|486|486
