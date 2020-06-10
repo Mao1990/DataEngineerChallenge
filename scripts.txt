@@ -1,0 +1,72 @@
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{FloatType, LongType, StringType, StructField, StructType, TimestampType}
+
+val logSchema: StructType = StructType(
+  Seq(
+    StructField("timestamp", TimestampType, nullable = false),
+    StructField("elb", StringType, nullable = false),
+    StructField("client:port", StringType, nullable = false),
+    StructField("backend:port", StringType, nullable = false),
+    StructField("request_processing_time", FloatType, nullable = false),
+    StructField("backend_processing_time", FloatType, nullable = false),
+    StructField("response_processing_time", FloatType, nullable = false),
+    StructField("elb_status_code", StringType, nullable = false),
+    StructField("backend_status_code", StringType, nullable = false),
+    StructField("received_bytes", LongType, nullable = false),
+    StructField("sent_bytes", LongType, nullable = false),
+    StructField("request", StringType, nullable = false),
+    StructField("user_agent", StringType, nullable = true),
+    StructField("ssl_cipher", StringType, nullable = false),
+    StructField("ssl_protocol", StringType, nullable = false)
+  )
+)
+
+def fromFile(path: String, schema: StructType)(implicit spark: SparkSession): DataFrame = {
+  spark.read
+    .option("delimiter", " ")
+    .option("timestampFormat", "yyyy-MM-dd'T'HH:mm:ss.SSSXXXZ")
+    .schema(schema)
+    .csv(path)
+}
+
+val logPath =
+val logDf = fromFile(logPath, logSchema)(spark)
+
+val secondAggDf = logDf
+  .withColumn("unixTimestamp", unix_timestamp(col("timestamp")))
+  .groupBy(col("unixTimestamp")).agg(count(lit(1)).as("requestConut"))
+  .select(
+    col("unixTimestamp"),
+    dayofmonth(from_unixtime(col("unixTimestamp"))).as("dayofmonth"),
+    dayofweek(from_unixtime(col("unixTimestamp"))).as("dayofweek"),
+    dayofyear(from_unixtime(col("unixTimestamp"))).as("dayofyear"),
+    hour(from_unixtime(col("unixTimestamp"))).as("hour"),
+    second(from_unixtime(col("unixTimestamp"))).as("second"),
+    weekofyear(from_unixtime(col("unixTimestamp"))).as("weekofyear"),
+    col("requestConut")
+  )
+
+ ~/Apache/spark-2.4.5-bin-hadoop2.7/bin/spark-submit \
+   --class com.seansun.sessionization.batch.Processor \
+   --master "local[2]" \
+   --conf "spark.sql.shuffle.partitions=4" \
+   /Users/tseensun/Projects/PayPay/DataEngineerChallenge/target/scala-2.11/DataEngineerChallenge-assembly-0.1.jar
+
+
+ export SESS_SRC_PATH="/Users/tseensun/Projects/PayPay/DataEngineerChallenge/data/2015_07_22_mktplace_shop_web_log_sample.log.gz"
+ export SESS_OUT_PATH="/Users/tseensun/Projects/PayPay/DataEngineerChallenge/output"
+
+
+ val secondAggDf = logDf
+   .withColumn("unixTimestamp", unix_timestamp(col("timestamp")))
+   .groupBy(col("unixTimestamp")).agg(count(lit(1)).as("requestConut"))
+   .select(
+     col("unixTimestamp"),
+     dayofmonth(from_unixtime(col("unixTimestamp"))).as("dayofmonth"),
+     dayofweek(from_unixtime(col("unixTimestamp"))).as("dayofweek"),
+     dayofyear(from_unixtime(col("unixTimestamp"))).as("dayofyear"),
+     hour(from_unixtime(col("unixTimestamp"))).as("hour"),
+     second(from_unixtime(col("unixTimestamp"))).as("second"),
+     weekofyear(from_unixtime(col("unixTimestamp"))).as("weekofyear"),
+     col("requestConut")
+   )
