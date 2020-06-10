@@ -1,11 +1,17 @@
 package com.seansun.sessionization.batch
 
+import java.io.File
+import java.io.FileWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.SaveMode
+import scopt.OParser
 import pureconfig._
 import pureconfig.generic.auto._
-import com.seansun.sessionization.conf.ApplicationConfig.BatchSessionConfig
+
+import com.seansun.sessionization.conf.ApplicationConfig._
 import com.seansun.sessionization.core.Sessionizer
 
 object Processor {
@@ -15,26 +21,54 @@ object Processor {
     val batchSessionConfig = ConfigSource.default.at("batch").load[BatchSessionConfig]
 
     batchSessionConfig match {
-      case Left(err) =>  println(err.prettyPrint())
-      case Right(conf) => {
-        implicit val spark: SparkSession = SparkSession.builder().appName("Spark SQL batched Sessionize").getOrCreate()
+      case Left(err) => println(err.prettyPrint())
+      case Right(conf) => OParser.parse(configParser, args, conf) match {
+        case Some(c) => {
+          implicit val spark: SparkSession = SparkSession
+            .builder()
+            .appName("Spark SQL batched Sessionize")
+            .getOrCreate()
 
-        val logDf = fromFile(conf.srcPath, logSchema)
-          .withColumn("ip", regexp_extract(col("client:port"), "(.+):", 1))
-        val sessionDs = Sessionizer.sqlSessionize(logDf, col(conf.userIdField), conf.maxSessionDuration)
+          val logDf = fromFile(c.srcPath, logSchema)
+            .withColumn("ip", regexp_extract(col("client:port"), "(.+):", 1))
+          val sessionDs = Sessionizer.sqlSessionize(logDf, col(c.userIdField), c.maxSessionDuration)
+              .coalesce(2 * spark.sparkContext.defaultParallelism)
+              .cache()
 
-        sessionDs.select(avg("sessionLength").as("average session time in second")).show()
+          sessionDs.write.mode(SaveMode.Overwrite).parquet(c.outputPath + "/sessions")
+          sessionDs.select(
+            col("userId"),
+            col("sessionId"),
+            array_join(col("uniqueRequests"), "|")
+          ).write.mode(SaveMode.Overwrite).csv(c.outputPath + "/sessionUniqueURL")
 
-        sessionDs
-          .groupBy(col("userId"))
-          .agg(sum("sessionLength").as("totalSessionTime"))
-          .orderBy(col("totalSessionTime").desc)
-          .show(10)
-        sessionDs.select(
-          col("userId"),
-          col("sessionId"),
-          array_join(col("uniqueRequests"), "|")
-        ).write.csv(conf.outputPath)
+          val fileWriter = new FileWriter(new File(c.outputPath + "/report.txt"))
+          fileWriter.write("The average session length time in second is: ")
+          sessionDs
+            .select(avg("sessionLength").as("average session time in second"))
+            .collect()
+            .foreach(line => fileWriter.append(line + "\n\n"))
+
+          fileWriter.append("The following shows the top 10 most engaged user\n")
+          fileWriter.append(
+            "[userId, totalSessionTime, totalSessionCount, totalRequestCount, totalUniqueRequestCount]\n"
+          )
+          sessionDs
+            .groupBy(col("userId"))
+            .agg(
+              sum("sessionLength").as("totalSessionTime"),
+              count("sessionId").as("totalSessionCount"),
+              sum(size(col("requests"))).as("totalRequestCount"),
+              sum(size(col("uniqueRequests"))).as("totalUniqueRequestCount")
+            )
+            .orderBy(col("totalSessionTime").desc).show
+            .take(10)
+            .foreach(line => fileWriter.append(line + "\n"))
+
+          fileWriter.close()
+
+        }
+        case _ => println("Please fill in the valid options")
       }
     }
   }

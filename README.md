@@ -61,3 +61,17 @@ We want to see how you handle:
 - Messy (ie real) data
 - Understanding data transformation
 This is not a pass or fail test, we want to hear about your challenges and your successes with this particular problem.
+
+
+## Some script note
+```$xslt
+.bin/spark-submit \
+  --class com.seansun.sessionization.batch.Processor \
+  --master 'local[*]' \
+  --conf 'spark.sql.shuffle.partitions=12' \
+  /path/to/DataEngineerChallenge-assembly-0.1.jar \
+  [--srcPath /path/to/2015_07_22_mktplace_shop_web_log_sample.log.gz \]
+  [--outputPath /path/to/output \]
+  [--maxSessionDuration 15 \]
+  [--userIdField ip]
+```
