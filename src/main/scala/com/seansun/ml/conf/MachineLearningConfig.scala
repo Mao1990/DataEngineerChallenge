@@ -1,6 +1,6 @@
 package com.seansun.ml.conf
 
-import com.seansun.ml.DataFormat
+import com.seansun.ml.enums.DataFormat
 import scopt.{OParser, OParserBuilder}
 
 object MachineLearningConfig {

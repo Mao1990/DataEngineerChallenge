@@ -1,8 +1,8 @@
-package com.seansun.ml
-
-import scala.collection.immutable
+package com.seansun.ml.enums
 
 import enumeratum._
+
+import scala.collection.immutable
 
 sealed trait DataFormat extends EnumEntry
 
