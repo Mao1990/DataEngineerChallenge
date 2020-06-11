@@ -5,7 +5,7 @@ import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util.Identifiable
-import org.apache.spark.mllib.linalg.VectorUDT
+import org.apache.spark.ml.linalg.SQLDataTypes.VectorType
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.functions.{col, dayofmonth, dayofweek, dayofyear, hour, minute, second, weekofyear}
 import org.apache.spark.sql.types.{StructField, StructType, TimestampType}
@@ -15,7 +15,7 @@ class UnixTimestampFeatures(override val uid: String) extends Transformer with H
   def this() = this(Identifiable.randomUID("UnixTimestampFeatures"))
 
   /** @group setParam */
-  def setInputCols(value: String): this.type = set(inputCol, value)
+  def setInputCol(value: String): this.type = set(inputCol, value)
 
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
@@ -28,7 +28,7 @@ class UnixTimestampFeatures(override val uid: String) extends Transformer with H
     if (schema.fieldNames.contains(outputColName)) {
       throw new IllegalArgumentException(s"Output column $outputColName already exists.")
     }
-    StructType(schema.fields :+ StructField(outputColName, new VectorUDT, nullable = true))
+    StructType(schema.fields :+ StructField(outputColName, VectorType, nullable = true))
   }
 
   override def transform(dataset: Dataset[_]): DataFrame = {
@@ -38,17 +38,16 @@ class UnixTimestampFeatures(override val uid: String) extends Transformer with H
     val initColumns = dataset.columns
     val df = dataset.select(
       col("*"),
-      weekofyear(col("unixTimestampMinute")).as("weekofyear"),
-      dayofmonth(col("unixTimestampMinute")).as("dayofmonth"),
-      dayofweek(col("unixTimestampMinute")).as("dayofweek"),
-      dayofyear(col("unixTimestampMinute")).as("dayofyear"),
-      hour(col("unixTimestampMinute")).as("hour"),
-      minute(col("unixTimestampMinute")).as("minute"),
-      second(col("unixTimestampMinute")).as("second")
+      weekofyear(col($(inputCol))).as("weekofyear"),
+      dayofmonth(col($(inputCol))).as("dayofmonth"),
+      dayofweek(col($(inputCol))).as("dayofweek"),
+      dayofyear(col($(inputCol))).as("dayofyear"),
+      hour(col($(inputCol))).as("hour"),
+      minute(col($(inputCol))).as("minute"),
+      second(col($(inputCol))).as("second")
     )
     assembler.transform(df).select(
-      initColumns.map(col) :_*,
-      col($(outputCol))
+      initColumns.map(col) :+ col($(outputCol)) : _*
     )
   }
 

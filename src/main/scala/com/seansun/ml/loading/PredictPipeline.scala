@@ -37,7 +37,7 @@ object PredictPipeline {
 
 
         val unixTimestampFeatures = new UnixTimestampFeatures()
-          .setInputCols("unixTimestampMinute")
+          .setInputCol("unixTimestampMinute")
           .setOutputCol("features")
 
         val lr = new LinearRegression()
