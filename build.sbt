@@ -11,7 +11,8 @@ libraryDependencies ++= Seq(
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
   "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-  "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
+  "com.beachape" %% "enumeratum" % "1.6.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % Test,
   "com.holdenkarau" %% "spark-testing-base" % "2.4.5_0.14.0" % Test
 )

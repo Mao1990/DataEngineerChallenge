@@ -11,14 +11,14 @@ import scopt.OParser
 import pureconfig._
 import pureconfig.generic.auto._
 
-import com.seansun.sessionization.conf.ApplicationConfig._
+import com.seansun.sessionization.conf.SessionizeConfig._
 import com.seansun.sessionization.core.Sessionizer
 
 object Processor {
 
   def main(args: Array[String]): Unit = {
 
-    val batchSessionConfig = ConfigSource.default.at("batch").load[BatchSessionConfig]
+    val batchSessionConfig = ConfigSource.default.at("batch-sessionize").load[BatchSessionConfig]
 
     batchSessionConfig match {
       case Left(err) => println(err.prettyPrint())
@@ -101,5 +101,9 @@ object Processor {
       .option("timestampFormat", "yyyy-MM-dd'T'HH:mm:ss.SSSXXXZ")
       .schema(schema)
       .csv(path)
+  }
+
+  def fromParquetFile(path: String)(implicit spark: SparkSession): DataFrame = {
+    spark.read.parquet(path)
   }
 }

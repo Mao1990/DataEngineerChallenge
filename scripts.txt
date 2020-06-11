@@ -57,8 +57,8 @@ val secondAggDf = logDf
  export SESS_OUT_PATH="/Users/tseensun/Projects/PayPay/DataEngineerChallenge/output"
 
 
- val secondAggDf = logDf
-   .withColumn("unixTimestamp", unix_timestamp(col("timestamp")))
+ val minuteAggDf = logDf
+   .withColumn("unixTimestampMinute", round(unix_timestamp(col("timestamp")/60))*60)
    .groupBy(col("unixTimestamp")).agg(count(lit(1)).as("requestConut"))
    .select(
      col("unixTimestamp"),

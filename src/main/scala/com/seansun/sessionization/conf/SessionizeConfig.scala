@@ -4,7 +4,7 @@ import pureconfig._
 import pureconfig.generic.auto._
 import scopt.{OParser, OParserBuilder}
 
-object ApplicationConfig {
+object SessionizeConfig {
 
   final case class BatchSessionConfig(
     userIdField: String,
