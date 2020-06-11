@@ -18,6 +18,7 @@ object Processor {
 
   def main(args: Array[String]): Unit = {
 
+    /** Read the application.conf, the config can be set bu environment variables or add when spark-submit  */
     val batchSessionConfig = ConfigSource.default.at("batch-sessionize").load[BatchSessionConfig]
 
     batchSessionConfig match {
@@ -29,19 +30,24 @@ object Processor {
             .appName("Spark SQL batched Sessionize")
             .getOrCreate()
 
+          /** Load the origin log file */
           val logDf = fromFile(c.srcPath, logSchema)
             .withColumn("ip", regexp_extract(col("client:port"), "(.+):", 1))
+          /** Call Sessionizer.sqlSessionize to do the sessionization */
           val sessionDs = Sessionizer.sqlSessionize(logDf, col(c.userIdField), c.maxSessionDuration)
               .coalesce(2 * spark.sparkContext.defaultParallelism)
               .cache()
 
+          /** Save the session result */
           sessionDs.write.mode(SaveMode.Overwrite).parquet(c.outputPath + "/sessions")
+          /** Save the unique URL per session result */
           sessionDs.select(
             col("userId"),
             col("sessionId"),
             array_join(col("uniqueRequests"), "|")
           ).write.mode(SaveMode.Overwrite).csv(c.outputPath + "/sessionUniqueURL")
 
+          /** Write the average session length result and top 10 most engaged user */
           val fileWriter = new FileWriter(new File(c.outputPath + "/report.txt"))
           fileWriter.write("The average session length time in second is: ")
           sessionDs

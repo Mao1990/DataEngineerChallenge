@@ -16,6 +16,14 @@ object Sessionizer {
     requests: Seq[String],
     uniqueRequests: Seq[String]
   )
+  /**
+   * First create the userId column by input.
+   * use lag function with windows (partition by userId order by timestamp)
+   * determine the new session as 1 or 0
+   * sum new session as the sessionId
+   * group by userId and sessionId fine the start timestamp and the end timestamp, also collect the request and
+   * calculate the session length in second
+   * identify the unique URLs*/
   def sqlSessionize(inputDf: DataFrame, userId: Column, maxSessionDuration: Int)
     (implicit spark: SparkSession): Dataset[Session] = {
     import spark.implicits._

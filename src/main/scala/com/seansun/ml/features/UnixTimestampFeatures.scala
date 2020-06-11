@@ -21,6 +21,7 @@ class UnixTimestampFeatures(override val uid: String) extends Transformer with H
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
+  /** A Transformer need transformSchema */
   override def transformSchema(schema: StructType): StructType = {
     val inputType = schema($(inputCol)).dataType
     require(inputType.isInstanceOf[TimestampType],
@@ -32,6 +33,7 @@ class UnixTimestampFeatures(override val uid: String) extends Transformer with H
     StructType(schema.fields :+ StructField(outputColName, VectorType, nullable = true))
   }
 
+  /** The actual transform logic */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val assembler = new VectorAssembler()
       .setInputCols(Array("weekofyear", "dayofmonth", "dayofweek", "dayofyear", "hour", "minute", "second"))
